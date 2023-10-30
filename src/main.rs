@@ -45,6 +45,7 @@ fn main() {
 
     // handle arguments
     let matches = peakfile().get_matches();
+    let last_flag = matches.get_flag("last");
 
     if let Some(_) = matches.subcommand_matches("log") {
         if let Ok(logs) = show_log_file(&config_dir) {
@@ -112,20 +113,43 @@ fn main() {
 
             content.push_str(&file_content);
 
-            let mut counter = 0;
-            for line in content.lines() {
-                if counter == num_flag {
-                    break;
-                };
-
-                println!("{line}");
-                counter += 1;
+            if last_flag {
+                show_last_n_lines(&content, num_flag);
+            } else {
+                show_first_n_lines(&content, num_flag);
             }
         } else {
             let _ = peakfile().print_help();
             process::exit(0);
         }
     }
+}
+
+fn show_first_n_lines(content: &String, num_flag: u32) {
+    let mut counter = 0;
+    for line in content.lines() {
+        if counter == num_flag {
+            break;
+        };
+
+        println!("{line}");
+        counter += 1;
+    }
+}
+
+fn show_last_n_lines(content: &String, num_flag: u32) {
+    let mut last_lines: Vec<&str> = Vec::new();
+    let mut counter = 0;
+    for line in content.lines().rev() {
+        if counter == num_flag {
+            break;
+        };
+
+        last_lines.push(line);
+        counter += 1;
+    }
+
+    last_lines.iter().rev().for_each(|line| println!("{line}"));
 }
 
 // build cli
@@ -144,7 +168,7 @@ fn peakfile() -> Command {
             "Leann Phydon <leann.phydon@gmail.com>".italic().dimmed()
         ))
         // TODO update version
-        .version("1.0.0")
+        .version("1.1.0")
         .author("Leann Phydon <leann.phydon@gmail.com>")
         .arg(
             Arg::new("arg")
@@ -152,6 +176,13 @@ fn peakfile() -> Command {
                 .action(ArgAction::Set)
                 .num_args(1)
                 .value_name("PATH"),
+        )
+        .arg(
+            Arg::new("last")
+                .short('l')
+                .long("last")
+                .help("Show last n lines")
+                .action(ArgAction::SetTrue),
         )
         .arg(
             Arg::new("num")
