@@ -4,7 +4,8 @@ use log::{error, warn};
 use owo_colors::colored::*;
 
 use std::{
-    fs, io,
+    fs,
+    io::{self, BufRead},
     path::{Path, PathBuf},
     process,
 };
@@ -70,59 +71,83 @@ fn main() {
 
         let mut content = String::new();
 
+        let mut file = PathBuf::new();
         if let Some(arg) = matches.get_one::<String>("arg") {
             // get filepath
-            let path = Path::new(&arg);
 
-            if !path.exists() {
-                warn!("Path '{}' doesn`t exist", path.display());
-                process::exit(0);
-            }
+            // TODO remove later
+            // let path = Path::new(&arg);
 
-            if !path.is_file() {
-                warn!("Path '{}' is not a file", path.display());
-                process::exit(0);
-            }
-
-            // read content from file
-            let file_content = fs::read_to_string(path).unwrap_or_else(|err| {
-                match err.kind() {
-                    io::ErrorKind::InvalidData => {
-                        warn!("Path \'{}\' contains invalid data: {}", path.display(), err)
-                    }
-                    io::ErrorKind::NotFound => {
-                        warn!("Path \'{}\' not found: {}", path.display(), err);
-                    }
-                    io::ErrorKind::PermissionDenied => {
-                        warn!(
-                            "Missing permission to read path \'{}\': {}",
-                            path.display(),
-                            err
-                        )
-                    }
-                    _ => {
-                        error!(
-                            "Failed to access path: \'{}\'\nUnexpected error occurred: {}",
-                            path.display(),
-                            err
-                        )
-                    }
-                }
-                process::exit(0);
-            });
-
-            content.push_str(&file_content);
-
-            if last_flag {
-                show_last_n_lines(&content, num_flag);
-            } else {
-                show_first_n_lines(&content, num_flag);
-            }
+            file.push(&arg);
         } else {
-            let _ = peakfile().print_help();
+            // read input from pipe
+
+            // TODO remove later
+            // let _ = peakfile().print_help();
+            // process::exit(0);
+
+            let pipe_input = read_pipe();
+            file.push(pipe_input);
+        }
+
+        let path = file.as_path();
+
+        if !path.exists() {
+            warn!("Path '{}' doesn`t exist", path.display());
             process::exit(0);
         }
+
+        if !path.is_file() {
+            warn!("Path '{}' is not a file", path.display());
+            process::exit(0);
+        }
+
+        // read content from file
+        let file_content = fs::read_to_string(path).unwrap_or_else(|err| {
+            match err.kind() {
+                io::ErrorKind::InvalidData => {
+                    warn!("Path \'{}\' contains invalid data: {}", path.display(), err)
+                }
+                io::ErrorKind::NotFound => {
+                    warn!("Path \'{}\' not found: {}", path.display(), err);
+                }
+                io::ErrorKind::PermissionDenied => {
+                    warn!(
+                        "Missing permission to read path \'{}\': {}",
+                        path.display(),
+                        err
+                    )
+                }
+                _ => {
+                    error!(
+                        "Failed to access path: \'{}\'\nUnexpected error occurred: {}",
+                        path.display(),
+                        err
+                    )
+                }
+            }
+            process::exit(0);
+        });
+
+        content.push_str(&file_content);
+
+        if last_flag {
+            show_last_n_lines(&content, num_flag);
+        } else {
+            show_first_n_lines(&content, num_flag);
+        }
     }
+}
+
+fn read_pipe() -> String {
+    let mut input = io::stdin()
+        .lock()
+        .lines()
+        .fold("".to_string(), |acc, line| acc + &line.unwrap() + "\n");
+
+    let _ = input.pop();
+
+    input.trim().to_string()
 }
 
 fn show_first_n_lines(content: &String, num_flag: u32) {
@@ -167,8 +192,16 @@ fn peakfile() -> Command {
             "PF".bold().truecolor(250, 0, 104),
             "Leann Phydon <leann.phydon@gmail.com>".italic().dimmed()
         ))
+        .long_about(format!(
+            "{}\n\n{}\n- {}\n- {}\n\n{}\n",
+            "Peak File",
+            "Show the first/last few lines of a filepath:",
+            "given as an argument, or",
+            "given via pipe as the output of a previous command",
+            "Only works with one filepath at a time."
+        ))
         // TODO update version
-        .version("1.1.0")
+        .version("1.2.0")
         .author("Leann Phydon <leann.phydon@gmail.com>")
         .arg(
             Arg::new("arg")
