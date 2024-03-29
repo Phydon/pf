@@ -221,7 +221,7 @@ fn peakfile() -> Command {
             Arg::new("num")
                 .short('n')
                 .long("num")
-                .help("Number of lines to show")
+                .help("Number of lines to show [default: 10]")
                 .action(ArgAction::Set)
                 .num_args(1)
                 .value_name("NUMBER"),
