@@ -13,13 +13,7 @@ use std::{
 fn main() {
     // handle Ctrl+C
     ctrlc::set_handler(move || {
-        println!(
-            "{} {} {} {}",
-            "Received Ctrl-C!".bold().red(),
-            "🤬",
-            "Exit program!".bold().red(),
-            "☠",
-        );
+        println!("{}", "Received Ctrl-C!".italic(),);
         process::exit(0)
     })
     .expect("Error setting Ctrl-C handler");
@@ -192,7 +186,7 @@ fn peakfile() -> Command {
             "Only works with one filepath at a time."
         ))
         // TODO update version
-        .version("1.2.0")
+        .version("1.2.1")
         .author("Leann Phydon <leann.phydon@gmail.com>")
         .arg(
             Arg::new("arg")
