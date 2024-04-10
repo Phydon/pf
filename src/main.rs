@@ -74,18 +74,9 @@ fn main() {
         let mut file = PathBuf::new();
         if let Some(arg) = matches.get_one::<String>("arg") {
             // get filepath
-
-            // TODO remove later
-            // let path = Path::new(&arg);
-
             file.push(&arg);
         } else {
             // read input from pipe
-
-            // TODO remove later
-            // let _ = peakfile().print_help();
-            // process::exit(0);
-
             let pipe_input = read_pipe();
             file.push(pipe_input);
         }
