@@ -87,6 +87,9 @@ fn main() {
             process::exit(0);
         }
 
+        // TODO handle invalid data
+        // TODO e.g.: works: echo "something to file" > test.txt; cat test.txt
+        // TODO e.g.: fails: echo "something to file" > test.txt; pf test.txt
         // read content from file
         let file_content = fs::read_to_string(path).unwrap_or_else(|err| {
             match err.kind() {
