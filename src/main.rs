@@ -63,8 +63,6 @@ fn main() {
             }
         }
 
-        let mut content = String::new();
-
         let mut file = PathBuf::new();
         if let Some(arg) = matches.get_one::<String>("arg") {
             // get filepath
@@ -82,42 +80,47 @@ fn main() {
             process::exit(0);
         }
 
-        if !path.is_file() {
-            warn!("Path '{}' is not a file", path.display());
-            process::exit(0);
-        }
+        // TODO optimize this
+        let content = match path_type(path) {
+            "file" => get_content(path),
+            "dir" => {
+                // TODO replace unwrap()
+                let mut content = String::new();
+                for entry in fs::read_dir(path).unwrap() {
+                    let entry = entry.unwrap();
+                    let path = entry.path();
+                    let path_str = path.to_string_lossy().to_string();
 
-        // TODO handle invalid data
-        // TODO e.g.: works: echo "something to file" > test.txt; cat test.txt
-        // TODO e.g.: fails: echo "something to file" > test.txt; pf test.txt
-        // read content from file
-        let file_content = fs::read_to_string(path).unwrap_or_else(|err| {
-            match err.kind() {
-                io::ErrorKind::InvalidData => {
-                    warn!("Path \'{}\' contains invalid data: {}", path.display(), err)
+                    if path.is_file() {
+                        let entry_name = entry
+                            .path()
+                            .file_name()
+                            .unwrap_or_else(|| {
+                                error!("Unable to get the filename of {path_str}",);
+                                process::exit(1);
+                            })
+                            .to_string_lossy()
+                            .to_string();
+
+                        // TODO ugly
+                        content.push_str("-------\n");
+                        content.push_str(&entry_name);
+                        content.push_str("\n");
+                        content.push_str("\n");
+                        content.push_str(&get_content(path.as_path()));
+                        content.push_str("\n");
+                        content.push_str("-------\n");
+                        content.push_str("\n");
+                    }
                 }
-                io::ErrorKind::NotFound => {
-                    warn!("Path \'{}\' not found: {}", path.display(), err);
-                }
-                io::ErrorKind::PermissionDenied => {
-                    warn!(
-                        "Missing permission to read path \'{}\': {}",
-                        path.display(),
-                        err
-                    )
-                }
-                _ => {
-                    error!(
-                        "Failed to access path: \'{}\'\nUnexpected error occurred: {}",
-                        path.display(),
-                        err
-                    )
-                }
+
+                content
             }
-            process::exit(0);
-        });
-
-        content.push_str(&file_content);
+            _ => {
+                error!("Unable to read file content");
+                process::exit(0);
+            }
+        };
 
         if last_flag {
             show_last_n_lines(&content, num_flag);
@@ -125,6 +128,52 @@ fn main() {
             show_first_n_lines(&content, num_flag);
         }
     }
+}
+
+// TODO optimize this
+fn path_type(path: &Path) -> &str {
+    if path.is_file() {
+        return "file";
+    } else if path.is_dir() {
+        return "dir";
+    } else {
+        warn!("Path '{}' invalid", path.display());
+        process::exit(0);
+    }
+}
+
+fn get_content(path: &Path) -> String {
+    // TODO handle invalid data
+    // TODO e.g.: works: echo "something to file" > test.txt; cat test.txt
+    // TODO e.g.: fails: echo "something to file" > test.txt; pf test.txt
+    // read content from file
+    let content = fs::read_to_string(path).unwrap_or_else(|err| {
+        match err.kind() {
+            io::ErrorKind::InvalidData => {
+                warn!("Path \'{}\' contains invalid data: {}", path.display(), err)
+            }
+            io::ErrorKind::NotFound => {
+                warn!("Path \'{}\' not found: {}", path.display(), err);
+            }
+            io::ErrorKind::PermissionDenied => {
+                warn!(
+                    "Missing permission to read path \'{}\': {}",
+                    path.display(),
+                    err
+                )
+            }
+            _ => {
+                error!(
+                    "Failed to access path: \'{}\'\nUnexpected error occurred: {}",
+                    path.display(),
+                    err
+                )
+            }
+        }
+        process::exit(0);
+    });
+
+    content
 }
 
 fn read_pipe() -> String {
